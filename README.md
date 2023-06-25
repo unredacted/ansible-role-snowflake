@@ -27,6 +27,7 @@ Example Playbook
 
 Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
+```
 - name: Run the ansible-role-snowflake role and include custom vars
   remote_user: root
   hosts: '{{ target }}'
@@ -39,6 +40,7 @@ Including an example of how to use your role (for instance, with variables passe
 
   - name: Remove the snowflake repo to grab it fresh
     ansible.builtin.shell: "rm -rf /home/snowflake"
+```
 
 License
 -------
