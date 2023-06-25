@@ -1,0 +1,7 @@
+---
+# tasks file for ansible-role-snowflake
+
+- include_tasks: debian.yml
+  when:
+    - ansible_distribution == 'Debian'
+    - ansible_distribution_release == 'bullseye' or ansible_distribution_release == 'bookworm'

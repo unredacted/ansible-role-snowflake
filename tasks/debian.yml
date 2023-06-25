@@ -1,0 +1,102 @@
+- name: Update cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Add backports repository
+  ansible.builtin.apt_repository:
+    repo: "deb http://deb.debian.org/debian bullseye-backports main"
+    state: present
+    update_cache: true
+  when: ansible_distribution_release == "bullseye"
+
+- name: Install required software
+  ansible.builtin.package:
+    name: "{{ snowflake_packages_debian }}"
+    state: present
+
+- name: Add the user
+  ansible.builtin.user:
+    name: "{{ snowflake_user }}"
+    create_home: true
+    state: present
+
+- name: Clone snowflake repo
+  ansible.builtin.git:
+    repo: 'https://git.torproject.org/pluggable-transports/snowflake.git'
+    version: "{{ snowflake_version }}"
+    dest: /home/{{ snowflake_user }}/repo
+    update: "{{ snowflake_update }}"
+  register: clone_git
+
+- name: Go get
+  ansible.builtin.command: go get
+  args:
+    chdir: /home/{{ snowflake_user }}/repo/server
+  register: go_get
+  when: clone_git is changed
+
+- name: Go build
+  ansible.builtin.command: go build
+  args:
+    chdir: /home/{{ snowflake_user }}/repo/server
+  register: go_build
+  when: clone_git is changed
+
+- name: Copy binary file to /usr/local/bin/
+  ansible.builtin.copy:
+    src: /home/{{ snowflake_user }}/repo/server/server
+    dest: /usr/local/bin/snowflake-server
+    mode: a+x
+    remote_src: yes
+
+- name: Allow snowflake-server to listen on port 80 without root
+  ansible.builtin.command: setcap 'cap_net_bind_service=+ep' /usr/local/bin/snowflake-server
+
+- name: Replace NoNewPrivileges=yes with NoNewPrivileges=no in the Tor systemd service
+  ansible.builtin.lineinfile:
+    path: /lib/systemd/system/tor@.service
+    regexp: '^NoNewPrivileges=yes'
+    line: 'NoNewPrivileges=no'
+  register: systemd_reload_needed
+
+- name: Reload systemd
+  ansible.builtin.command: systemctl daemon-reload
+  when: systemd_reload_needed.changed
+
+- name: Ensure lsb-release, apt-transport-https, authbind and gpg packages are installed
+  become: yes
+  apt:
+    name: lsb-release,apt-transport-https,authbind,gpg,gnupg2
+    update_cache: yes
+    cache_valid_time: 86400
+
+- name: Ensure torproject gpg key is installed (A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89)
+  become: yes
+  apt_key:
+    url: https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc
+    id: A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89
+    state: present
+
+- name: Ensure torproject.org repository is present (APT)
+  become: yes
+  apt_repository:
+    repo: 'deb https://deb.torproject.org/torproject.org {{ ansible_distribution_release }} main'
+    state: present
+    update_cache: yes
+
+- name: Ensure Tor is installed
+  become: yes
+  apt:
+    name: tor,deb.torproject.org-keyring
+    update_cache: yes
+    cache_valid_time: 86400
+
+- name: Copy the torrc file to server and restart if changed
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/tor/{{ item }}"
+    mode: 0644
+  with_items:
+    - torrc
+  notify: Restart Tor

@@ -1,0 +1,24 @@
+---
+# defaults file for ansible-role-snowflake
+
+snowflake_packages_debian:
+- git
+- golang-src
+- golang-go
+
+snowflake_packages_ubuntu:
+- git
+- golang-src
+- golang-go
+
+snowflake_user: snowflake
+
+# Update standalone version
+snowflake_update: yes
+
+# Use tags from https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tags
+snowflake_version: v2.6.0
+
+snowflake_server_hostname: hostname.server.com
+snowflake_server_acme_email: email@domain.com
+snowflake_server_log_path: /var/log/tor/snowflake-server.log
