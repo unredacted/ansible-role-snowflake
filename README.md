@@ -5,6 +5,8 @@ This Ansible role helps you run Snowflake, a censorship resistant pluggable tran
 
 Currently the role helps you run a Snowflake server, which is different than a Snowflake proxy https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tree/main/server
 
+At the moment, running a Snowflake server doesn't do anything as Snowflake clients won't use it. Described more in https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/issues/40248
+
 If you want to run a Snowflake proxy with Ansible, please check out https://github.com/nvjacobo/snowflake
 
 Requirements
